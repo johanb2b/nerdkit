@@ -16,11 +16,14 @@ G_HEADER="\033[48;5;33m\033[38;5;255m"
 BOLD="\033[1m"; RESET="\033[0m"
 
 # --- Settings & Files ---
-TERM_HIST="$HOME/.jaterminal_history"; NET_HIST="$HOME/.janettest_history"
-CERT_HIST="$HOME/.jacertcheck_history"; IP_HIST="$HOME/.jaipcheck_history"
-DNS_HIST="$HOME/.jadns_history"; SPEEDTEST_HIST="$HOME/.jaspeed_history"
-SCP_HIST="$HOME/.jascp_history"; WIN_TEMP="/mnt/c/temp/TerminalLogs"
-PASS_SAVE="/mnt/c/temp/passwords.txt"
+BASE_DIR="/mnt/c/temp/nerdkit"
+mkdir -p "$BASE_DIR" 2>/dev/null
+
+TERM_HIST="$BASE_DIR/terminal_history"; NET_HIST="$BASE_DIR/nettest_history"
+CERT_HIST="$BASE_DIR/certcheck_history"; IP_HIST="$BASE_DIR/ipcheck_history"
+DNS_HIST="$BASE_DIR/dns_history"; SPEEDTEST_HIST="$BASE_DIR/speed_history"
+SCP_HIST="$BASE_DIR/scp_history"; WIN_TEMP="$BASE_DIR/logs"
+PASS_SAVE="$BASE_DIR/passwords.txt"
 
 mkdir -p "$WIN_TEMP" 2>/dev/null
 touch "$TERM_HIST" "$NET_HIST" "$CERT_HIST" "$IP_HIST" "$DNS_HIST" "$SPEEDTEST_HIST" "$SCP_HIST"
