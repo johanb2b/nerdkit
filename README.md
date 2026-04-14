@@ -58,8 +58,9 @@ Verktyget är optimerat för **Ubuntu/Debian** (fungerar utmärkt i WSL) och ins
 ---
 
 ## 📂 Struktur & Loggar
-- **Loggar:** Sparas i `/mnt/c/temp/TerminalLogs` (Windows-vänligt för WSL-användare).
-- **Historik:** Sparas i din hemkatalog (t.ex. `~/.jaterminal_history`).
+- **Allt-i-ett-mapp:** Alla loggar, historik och lösenord sparas i `/mnt/c/temp/nerdkit`.
+- **Loggar:** Sparas specifikt i `/mnt/c/temp/nerdkit/logs`.
+- **Historik:** Sparas som textfiler i samma mapp (t.ex. `terminal_history`).
 
 ---
 
