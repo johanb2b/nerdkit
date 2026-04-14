@@ -12,7 +12,7 @@
 ### 1. JA TERM - Terminal Manager
 Hantera dina SSH- och seriella anslutningar (COM) på ett smidigt sätt.
 - **Historik & Favoriter:** Spara dina vanligaste anslutningar med färgkodning.
-- **Loggning:** Automatisk loggning av sessioner.
+- **Loggning:** Automatisk loggning av sessioner till den lokala mappen `data/logs`.
 - **TMUX-integration:** Kör stabila sessioner som överlever nätverksavbrott.
 
 ### 2. JA NETTEST - Diagnostik-Dashboard
@@ -33,7 +33,8 @@ Djupanalys av SSL/TLS-certifikat för valfri host. Se utgångsdatum, utfärdare 
 Enkel filöverföring med inbyggd filbläddrare för både lokala filer och fjärrservrar.
 
 ### 7. Övriga Verktyg
-- **JA P$SSWD:** Lösenordsgenerator.
+- **JA P$SSWD - Generator:** Skapa säkra, slumpmässiga lösenord direkt i terminalen.
+  - **Lagring:** Endast de lösenord som *genereras* av verktyget sparas automatiskt i `data/passwords.txt` för enkel åtkomst senare. Inga manuellt inmatade lösenord sparas.
 - **JA SPEEDTEST:** Bandbreddstest direkt i terminalen via `speedtest-cli`.
 
 ---
