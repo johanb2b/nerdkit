@@ -1,7 +1,7 @@
 # 🛠️ JA Nerd Kit v10.0
 ### "Hur svårt kan det va?"
 
-**JA Nerd Kit** är den ultimata verktygslådan för nätverkstekniker och systemadministratörer. Utvecklat av Johan Andersson för att samla alla viktiga diagnos- och administrationsverktyg i ett snyggt och lättanvänt terminalgränssnitt.
+**JA Nerd Kit** är den ultimata verktygslådan för nätverkstekniker och systemadministratörer. Utvecklat av Johan Andersson för att samla alla viktiga diagnos- och administrationsverktyg i ett snyggt och lättanvänt terminalgränssnitt. **Designat specifikt för att köras i WSL (Windows Subsystem for Linux) på Windows.**
 
 ![Main Dashboard Placeholder](https://via.placeholder.com/800x400?text=JA+Nerd+Kit+Main+Dashboard)
 
@@ -12,7 +12,7 @@
 ### 1. JA TERM - Terminal Manager
 Hantera dina SSH- och seriella anslutningar (COM) på ett smidigt sätt.
 - **Historik & Favoriter:** Spara dina vanligaste anslutningar med färgkodning.
-- **Loggning:** Automatisk loggning av sessioner till `/mnt/c/temp/TerminalLogs`.
+- **Loggning:** Automatisk loggning av sessioner.
 - **TMUX-integration:** Kör stabila sessioner som överlever nätverksavbrott.
 
 ### 2. JA NETTEST - Diagnostik-Dashboard
@@ -41,16 +41,24 @@ Enkel filöverföring med inbyggd filbläddrare för både lokala filer och fjä
 ## 🛠️ Installation & Användning
 
 ### Förutsättningar
-Verktyget är optimerat för **Ubuntu/Debian** (fungerar utmärkt i WSL) och installerar automatiskt de beroenden som krävs:
+Verktyget är optimerat för **Windows Subsystem for Linux (WSL)** med en Ubuntu/Debian-distro. Det installerar automatiskt de beroenden som krävs:
 - `tmux`, `curl`, `jq`, `openssl`, `dnsutils`, `traceroute`, `speedtest-cli`.
 
 ### Starta verktyget
-1. Klona repot eller ladda ner `janerdkit.sh`.
-2. Gör filen exekverbar:
+Du kan välja att köra scriptet från vilken mapp som helst. All data, historik och loggar kommer att sparas i en undermapp som heter `data/` på den plats där scriptet ligger.
+
+1. Öppna din WSL-terminal.
+2. Skapa eller gå till den mapp där du vill ha verktyget:
+   ```bash
+   mkdir -p ~/tools/nerdkit
+   cd ~/tools/nerdkit
+   ```
+3. Placera `janerdkit.sh` i mappen.
+4. Gör filen exekverbar:
    ```bash
    chmod +x janerdkit.sh
    ```
-3. Kör scriptet:
+5. Kör scriptet:
    ```bash
    ./janerdkit.sh
    ```
@@ -58,7 +66,8 @@ Verktyget är optimerat för **Ubuntu/Debian** (fungerar utmärkt i WSL) och ins
 ---
 
 ## 📂 Struktur & Loggar
-- **Lokal data:** All historik, loggar och lösenord sparas i en undermapp som heter `data/` där scriptet körs.
+- **Valfri placering:** Flytta scriptet till den mapp du vill använda som din "bas".
+- **Lokal data:** All historik, loggar och lösenord sparas i mappen `data/` i samma katalog som scriptet.
 - **Loggar:** Sparas i `data/logs`.
 - **Historik:** Sparas som textfiler i `data/` (t.ex. `terminal_history`).
 
