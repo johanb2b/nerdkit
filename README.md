@@ -58,9 +58,9 @@ Verktyget är optimerat för **Ubuntu/Debian** (fungerar utmärkt i WSL) och ins
 ---
 
 ## 📂 Struktur & Loggar
-- **Allt-i-ett-mapp:** Alla loggar, historik och lösenord sparas i `/mnt/c/temp/nerdkit`.
-- **Loggar:** Sparas specifikt i `/mnt/c/temp/nerdkit/logs`.
-- **Historik:** Sparas som textfiler i samma mapp (t.ex. `terminal_history`).
+- **Lokal data:** All historik, loggar och lösenord sparas i en undermapp som heter `data/` där scriptet körs.
+- **Loggar:** Sparas i `data/logs`.
+- **Historik:** Sparas som textfiler i `data/` (t.ex. `terminal_history`).
 
 ---
 

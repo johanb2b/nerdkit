@@ -16,7 +16,7 @@ G_HEADER="\033[48;5;33m\033[38;5;255m"
 BOLD="\033[1m"; RESET="\033[0m"
 
 # --- Settings & Files ---
-BASE_DIR="/mnt/c/temp/nerdkit"
+BASE_DIR="$(dirname "$(readlink -f "$0")")/data"
 mkdir -p "$BASE_DIR" 2>/dev/null
 
 TERM_HIST="$BASE_DIR/terminal_history"; NET_HIST="$BASE_DIR/nettest_history"
