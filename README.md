@@ -32,10 +32,12 @@ Djupanalys av SSL/TLS-certifikat för valfri host. Se utgångsdatum, utfärdare 
 ### 6. JA SCP - Filöverföring
 Enkel filöverföring med inbyggd filbläddrare för både lokala filer och fjärrservrar.
 
-### 7. Övriga Verktyg
-- **JA P$SSWD - Generator:** Skapa säkra, slumpmässiga lösenord direkt i terminalen.
-  - **Lagring:** Endast de lösenord som *genereras* av verktyget sparas automatiskt i `data/passwords.txt` för enkel åtkomst senare. Inga manuellt inmatade lösenord sparas.
-- **JA SPEEDTEST:** Bandbreddstest direkt i terminalen via `speedtest-cli`.
+### 7. JA P$SSWD - Generator
+Skapa säkra, slumpmässiga lösenord direkt i terminalen.
+- **Lagring:** Endast de lösenord som *genereras* av verktyget sparas automatiskt i `data/passwords.txt` för enkel åtkomst senare. Inga manuellt inmatade lösenord sparas.
+
+### 8. JA SPEEDTEST - Bandwidth
+Bandbreddstest direkt i terminalen via `speedtest-cli`.
 
 ---
 
@@ -46,7 +48,7 @@ Verktyget är optimerat för **Windows Subsystem for Linux (WSL)** med en Ubuntu
 - `tmux`, `curl`, `jq`, `openssl`, `dnsutils`, `traceroute`, `speedtest-cli`.
 
 ### Starta verktyget
-Du kan välja att köra scriptet från vilken mapp som helst. All data, historik och loggar kommer att sparas i en undermapp som heter `data/` på den plats där scriptet ligger.
+Du kan välja att köra scriptet från vilken mapp som helst. All data, historik och loggar kommer att sparas i una undermapp som heter `data/` på den plats där scriptet ligger.
 
 1. Öppna din WSL-terminal.
 2. Skapa eller gå till den mapp där du vill ha verktyget:
