@@ -11,33 +11,47 @@
 
 ### 1. JA TERM - Terminal Manager
 Hantera dina SSH- och seriella anslutningar (COM) på ett smidigt sätt.
-- **Historik & Favoriter:** Spara dina vanligaste anslutningar med färgkodning.
-- **Loggning:** Automatisk loggning av sessioner till den lokala mappen `data/logs`.
+- **Historik & Favoriter:** Spara dina vanligaste anslutningar med färgkodade namn.
+- **Loggning:** Automatisk loggning av sessioner till `data/logs`. Instruktioner för att avsluta loggläsning med 'q'.
 - **TMUX-integration:** Kör stabila sessioner som överlever nätverksavbrott.
 
-### 2. JA NETTEST - Diagnostik-Dashboard
+### 2. JA NETTEST - Diagnostic Dashboard
 En kraftfull vy som ger dig allt du behöver veta om en anslutning på en gång.
-- DNS-uppslag, Ping (latency), TCP-porttest, SSL-certifikatstatus och Traceroute i realtid.
+- DNS-uppslag, Ping, TCP-porttest, SSL-status och Traceroute i realtid.
+- **Historik:** Spara och hantera dina vanligaste tester.
 
 ### 3. JA MIN IP - IP Intel
 Hämta detaljerad information om din publika IP eller valfri IP-adress.
-- Organisation, ASN, Land och Stad direkt i terminalen.
+- Organisation, ASN, Land och Stad via stabila API-anrop.
+- **Menystyrd:** Växla mellan "Min IP", "Ange IP" och "Historik".
 
-### 4. JA DNS DIG - Record Lookup
+### 4. JA DNS CHECK - Record Lookup
 Snabba uppslag av de vanligaste DNS-posterna (A, AAAA, MX, NS, TXT, SOA).
+- **Nyhet:** Fullständig historikhantering för domäner.
 
 ### 5. JA CERTCHECK - SSL Analysis
-Djupanalys av SSL/TLS-certifikat för valfri host. Se utgångsdatum, utfärdare och SAN-namn.
+Djupanalys av SSL/TLS-certifikat för valfri host.
+- **Kedjeanalys:** Se hela förtroendekedjan ([LEAF], [INTERM], [ROOT]).
+- **CRL Info:** Kontrollera CRL Distribution Points.
+- **Historik:** Spara och radera tidigare certifikatanalyser.
 
-### 6. JA SCP - Filöverföring
-Enkel filöverföring med inbyggd filbläddrare för både lokala filer och fjärrservrar.
+### 6. JA COMMANDER - File Transfer (SCP)
+En kraftfull filhanterare för att flytta filer mellan din lokala maskin och fjärrservrar.
+- **Commander Mode:** Navigera i både lokala och fjärrstyrda mappar.
+- **Dubbelriktad:** Ladda upp (Local -> Remote) eller Ladda ner (Remote -> Local).
+- **Persistent:** Använder SSH ControlMaster för att behålla anslutningen öppen (endast ett lösenord behövs för hela sessionen).
+- **Filhantering:** Skapa mappar och radera filer/mappar både lokalt och på servern.
 
-### 7. JA P$SSWD - Generator
-Skapa säkra, slumpmässiga lösenord direkt i terminalen.
-- **Lagring:** Endast de lösenord som *genereras* av verktyget sparas automatiskt i `data/passwords.txt` för enkel åtkomst senare. Inga manuellt inmatade lösenord sparas.
+### 7. JA P$SSWD - Password Generator
+Skapa säkra, slumpmässiga lösenord baserade på vardagliga ord.
+- **Blandat språk:** Slumpar svenska och engelska vardagsord (400+ dolda ord).
+- **Anpassningsbar:** Välj antal ord, specialtecken, avdelare och antal lösenord.
+- **Säkerhet:** Använder `/dev/urandom` för maximal slumpmässighet.
 
-### 8. JA SPEEDTEST - Bandwidth
-Bandbreddstest direkt i terminalen via `speedtest-cli`.
+### 8. JA SPEEDTEST - Bandwidth Analysis
+Detaljerat bandbreddstest direkt i terminalen.
+- **Utökad Info:** Visar ISP, Publik IP, Testserver (namn/land) och Host.
+- **Historik:** Spara dina mätvärden för framtida jämförelser.
 
 ---
 
@@ -45,10 +59,10 @@ Bandbreddstest direkt i terminalen via `speedtest-cli`.
 
 ### Förutsättningar
 Verktyget är optimerat för **Windows Subsystem for Linux (WSL)** med en Ubuntu/Debian-distro. Det installerar automatiskt de beroenden som krävs:
-- `tmux`, `curl`, `jq`, `openssl`, `dnsutils`, `traceroute`, `speedtest-cli`.
+- `tmux`, `curl`, `jq`, `openssl`, `dnsutils`, `traceroute`, `speedtest-cli`, `bc`.
 
 ### Starta verktyget
-Du kan välja att köra scriptet från vilken mapp som helst. All data, historik och loggar kommer att sparas i una undermapp som heter `data/` på den plats där scriptet ligger.
+Du kan välja att köra scriptet från vilken mapp som helst. All data, historik och loggar kommer att sparas i en undermapp som heter `data/` på den plats där scriptet ligger.
 
 1. Öppna din WSL-terminal.
 2. Skapa eller gå till den mapp där du vill ha verktyget:
@@ -70,7 +84,7 @@ Du kan välja att köra scriptet från vilken mapp som helst. All data, historik
 
 ## 📂 Struktur & Loggar
 - **Valfri placering:** Flytta scriptet till den mapp du vill använda som din "bas".
-- **Lokal data:** All historik, loggar och lösenord sparas i mappen `data/` i samma katalog som scriptet.
+- **Lokal data:** All historik, loggar och lösenord sparas i mappen `data/` i samma katalog som scriptet. (Exkluderas automatiskt från git via `.gitignore`).
 - **Loggar:** Sparas i `data/logs`.
 - **Historik:** Sparas som textfiler i `data/` (t.ex. `terminal_history`).
 

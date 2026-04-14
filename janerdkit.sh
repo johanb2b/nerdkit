@@ -309,66 +309,247 @@ run_dns_check() {
 
 run_certcheck_logic() {
     local target=$(echo "$1" | sed -e 's|^[^/]*//||' -e 's|/.*$||'); draw_banner "CERTCHECK: $target"
+    # Spara i historik
+    sed -i "/^$target$/d" "$CERT_HIST" 2>/dev/null
+    echo "$target" >> "$CERT_HIST"
+
     data=$(echo | openssl s_client -connect "${target}:443" -servername "${target}" 2>/dev/null)
-    if [ -z "$data" ]; then echo -e "  ${P5}Kunde inte ansluta.${RESET}"; else
+    if [ -z "$data" ]; then echo -e "  ${P5}Kunde inte ansluta till ${target}:443.${RESET}"; else
         local issuer=$(echo "$data" | openssl x509 -noout -issuer | sed 's/issuer= //')
         local subject=$(echo "$data" | openssl x509 -noout -subject | sed 's/subject= //')
         local not_after=$(echo "$data" | openssl x509 -noout -dates | grep "notAfter" | cut -d'=' -f2)
         local days=$(( ( $(date -d "$not_after" +%s) - $(date +%s) ) / 86400 ))
-        printf "  %-20s [ ${G_CYAN}%-25s${RESET} ]\n" "Expiry Date" "$not_after"
-        printf "  %-20s [ ${G_CYAN}%-25s${RESET} ]\n" "Days Remaining" "$days dagar"
-        echo -e "\n  ${G_ACCENT}SUBJECT:${RESET} ${G_CYAN}${subject}${RESET}"
-        echo -e "  ${G_ACCENT}ISSUER:${RESET}  ${G_CYAN}${issuer}${RESET}"
+        
+        echo -e "  ${G_ACCENT}${BOLD}SSL/TLS CERTIFICATE ANALYSIS:${RESET}"
+        echo -e "  ${G_GREY}------------------------------------------------------------${RESET}"
+        printf "  %-20s [ ${G_CYAN}%-35s${RESET} ]\n" "Expiry Date" "$not_after"
+        printf "  %-20s [ ${G_CYAN}%-35s${RESET} ]\n" "Days Remaining" "$days dagar"
+        echo -e "\n  ${G_ACCENT}SUBJECT (CN/Details):${RESET}"
+        echo -e "  ${G_CYAN}${subject}${RESET}"
+        echo -e "\n  ${G_ACCENT}ISSUER:${RESET}"
+        echo -e "  ${G_CYAN}${issuer}${RESET}"
         echo -e "\n  ${G_ACCENT}DOMAINS (SAN):${RESET}"
         echo "$data" | openssl x509 -noout -text | grep -A 1 "Subject Alternative Name:" | tail -n 1 | sed 's/DNS://g' | tr -d ' ' | tr ',' '\n' | awk '{print "  - " $1}'
-    fi; read -rsn1 -p "Tangent...";
+        
+        echo -e "\n  ${G_ACCENT}CRL DISTRIBUTION POINTS:${RESET}"
+        crl=$(echo "$data" | openssl x509 -noout -text | grep -A 4 "CRL Distribution Points" | grep "URI:" | sed 's/URI://g' | tr -d ' ')
+        [ -z "$crl" ] && echo -e "  ${G_GREY}(Ingen CRL-info funnen)${RESET}" || echo "$crl" | awk '{print "  - " $1}'
+
+        echo -e "\n  ${G_ACCENT}CERTIFICATE CHAIN (Root / Intermediate / Leaf):${RESET}"
+        # Hämta kedjan och visa strukturerat
+        echo | openssl s_client -connect "${target}:443" -servername "${target}" -showcerts 2>/dev/null | grep -E "i:|s:" | sed 's/^ / /' | while read -r line; do
+            if [[ $line == s:* ]]; then 
+                local s_val=${line#s:}
+                if [[ $s_val == *"$target"* ]]; then echo -e "  ${G_CYAN}[LEAF]${RESET}   ${s_val}"; 
+                elif [[ $s_val == *"$issuer"* ]]; then echo -e "  ${P3}[INTERM]${RESET} ${s_val}";
+                else echo -e "  ${P2}[ROOT]${RESET}   ${s_val}"; fi
+            fi
+            if [[ $line == i:* ]]; then echo -e "  ${G_GREY}   Issued by: ${line#i:}${RESET}\n"; fi
+        done
+    fi
+    echo ""
+    read -rsn1 -p "Tryck tangent för att fortsätta...";
 }
 
-# ==============================================================================
-# TOOL 8: JA SCP (STABLE WITH FAILSAFE)
-# ==============================================================================
-
-SCP_FILE=""; SCP_DIR=""
-
-browse_local() {
-    files=($(ls -1p | grep -v '/$')); [ ${#files[@]} -eq 0 ] && { echo "Inga filer här."; sleep 1; return 1; }
-    display=(); for f in "${files[@]}"; do display+=("${G_FG}[FIL] $f${RESET}"); done
-    display+=("Avbryt")
-    run_menu "LOCAL FILE SELECT" "Välj fil i nuvarande mapp" "${display[@]}"; choice=$?
-    [ $choice -eq $((${#display[@]} - 1)) ] && return 1
-    SCP_FILE="${files[$choice]}"; return 0
-}
-
-browse_remote() {
-    local uh=$1; local cd="${2:-.}"
+run_cert_check() {
     while true; do
-        dirs=(".." "."); display=("${P3}[UPP] .." "${G_ACCENT}[VÄLJ DENNA MAPP] ." "MANUAL")
-        out=$(ssh -o ConnectTimeout=3 -o BatchMode=yes "$uh" "ls -1F $cd" 2>/dev/null)
-        if [ $? -ne 0 ]; then
-            echo -e "\n  Låst skal upptäckt. Ange målmapp manuellt."; read -p "  Mål: " man_path
-            SCP_DIR="${man_path:-.}"; return 0
-        fi
-        while IFS= read -r l; do [[ "$l" == */ ]] && { dirs+=("${l%/}"); display+=("${G_CYAN}[DIR] ${l%/}${RESET}"); }; done <<< "$out"
-        display+=("Avbryt"); run_menu "REMOTE BROWSER: $cd" "Välj målmapp" "${display[@]}"; choice=$?
-        [ $choice -eq $((${#display[@]} - 1)) ] && return 1
-        sel="${dirs[$choice]}"
-        if [ "$sel" == "MANUAL" ]; then read -p "  Mål: " m; SCP_DIR="${m:-.}"; return 0; fi
-        if [ "$sel" == "." ]; then SCP_DIR="$cd"; return 0; fi
-        if [ "$sel" == ".." ]; then cd=$(ssh "$uh" "cd $cd/.. && pwd" 2>/dev/null || echo ".."); else cd="$cd/$sel"; fi
+        options=("Ange Host / Domän" "Historik" "Tillbaka")
+        run_menu "JA CERTCHECK" "SSL/TLS Analys" "${options[@]}"; case $? in
+            0) read -p "  Ange Host: " h; [ -n "$h" ] && run_certcheck_logic "$h" ;;
+            1) manage_history_generic "$CERT_HIST" "CERTCHECK HISTORY" "run_certcheck_logic" ;;
+            *) return ;;
+        esac
     done
 }
 
-run_scp_logic() {
-    local d="$1"; IFS='|' read -r u h dst <<< "$d"
-    browse_local || return
-    [ -z "$h" ] && { draw_banner "JA SCP: ANSLUTNING"; read -p "  User [root]: " u; u=${u:-root}; read -p "  Host: " h; }
-    [ -z "$h" ] && return
-    browse_remote "${u}@$h" "$dst" || return
-    draw_banner "JA SCP: ÖVERFÖR"; echo -e "  Kopierar $SCP_FILE -> ${u}@${h}:${SCP_DIR}\n"
-    if scp "$SCP_FILE" "${u}@${h}:${SCP_DIR}"; then
-        echo -e "\n  ${G_CYAN}KLART!${RESET}"; echo "$u|$h|$SCP_DIR" >> "$SCP_HIST"
-    else echo -e "\n  ${P5}Misslyckades.${RESET}"; fi
-    read -rsn1 -p "Tangent...";
+# ==============================================================================
+# TOOL 7: JA SPEEDTEST
+# ==============================================================================
+
+run_speedtest_logic() {
+    draw_banner "JA SPEEDTEST"
+    echo -e "  ${G_ACCENT}${BOLD}STARTAR BANDBREDDSTEST...${RESET}"
+    echo -e "  ${G_GREY}Hämtar detaljerad data (ISP, Server, IP)...${RESET}\n"
+    
+    # Kör speedtest med JSON för mer info
+    local out=$(speedtest-cli --json 2>/dev/null)
+    
+    if [ -z "$out" ]; then
+        echo -e "  ${P5}Kunde inte genomföra testet. Kontrollera din anslutning.${RESET}"
+    else
+        # Extrahera data med jq
+        local ping=$(echo "$out" | jq -r '.ping')
+        local down_bps=$(echo "$out" | jq -r '.download')
+        local up_bps=$(echo "$out" | jq -r '.upload')
+        local isp=$(echo "$out" | jq -r '.client.isp')
+        local ip=$(echo "$out" | jq -r '.client.ip')
+        local srv_name=$(echo "$out" | jq -r '.server.name')
+        local srv_loc=$(echo "$out" | jq -r '.server.country')
+        local srv_host=$(echo "$out" | jq -r '.server.host')
+        local date=$(date "+%Y-%m-%d %H:%M")
+
+        # Konvertera bps till Mbps
+        local down_mbps=$(echo "scale=2; $down_bps / 1000000" | bc)
+        local up_mbps=$(echo "scale=2; $up_bps / 1000000" | bc)
+
+        echo -e "  ${G_ACCENT}${BOLD}ANSLUTNINGSDETALJER:${RESET}"
+        printf "  %-20s [ ${G_CYAN}%-35s${RESET} ]\n" "Din ISP" "$isp"
+        printf "  %-20s [ ${G_CYAN}%-35s${RESET} ]\n" "Publik IP" "$ip"
+        echo -e "\n  ${G_ACCENT}${BOLD}TESTSERVER:${RESET}"
+        printf "  %-20s [ ${G_CYAN}%-35s${RESET} ]\n" "Server / Land" "$srv_name, $srv_loc"
+        printf "  %-20s [ ${G_CYAN}%-35s${RESET} ]\n" "Host" "$srv_host"
+        
+        echo -e "\n  ${G_ACCENT}${BOLD}RESULTAT:${RESET}"
+        echo -e "  ${G_GREY}------------------------------------------------------------${RESET}"
+        printf "  %-20s [ ${G_CYAN}%-25s${RESET} ]\n" "Latency (Ping)" "${ping} ms"
+        printf "  %-20s [ ${G_CYAN}%-25s${RESET} ]\n" "Download Speed" "${down_mbps} Mbit/s"
+        printf "  %-20s [ ${G_CYAN}%-25s${RESET} ]\n" "Upload Speed" "${up_mbps} Mbit/s"
+        echo -e "  ${G_GREY}------------------------------------------------------------${RESET}"
+        
+        # Spara till historik (mer kompakt format för listning)
+        echo "$date | $isp | D:${down_mbps} | U:${up_mbps} | P:${ping}" >> "$SPEEDTEST_HIST"
+    fi
+    echo ""
+    read -rsn1 -p "Tryck tangent för att fortsätta...";
+}
+
+run_speedtest() {
+    while true; do
+        options=("Starta nytt hastighetstest" "Historik" "Tillbaka")
+        run_menu "JA SPEEDTEST" "Bandbreddsanalys" "${options[@]}"; case $? in
+            0) run_speedtest_logic ;;
+            1) manage_history_generic "$SPEEDTEST_HIST" "SPEEDTEST HISTORY" "echo" ;;
+            *) return ;;
+        esac
+    done
+}
+
+# ==============================================================================
+# TOOL 8: JA COMMANDER (SCP)
+# ==============================================================================
+
+COM_LOCAL_CWD=$(pwd); COM_REMOTE_CWD="."
+COM_HOST=""; COM_USER="root"; COM_FILE=""
+# SSH Options för att behålla anslutningen öppen (ControlMaster)
+COM_SSH_OPTS="-o ControlMaster=auto -o ControlPath=/tmp/ja_cmd_socket_%h_%p_%r -o ControlPersist=600"
+
+run_scp() {
+    while true; do
+        local connection="${COM_USER}@${COM_HOST:-"EJ ANGIVEN"}"
+        options=("Anslutning: $connection" "Lokal mapp: $COM_LOCAL_CWD" "Fjärr mapp: $COM_REMOTE_CWD" "--- FILHANTERARE ---" "Ladda UPP (Lokal -> Fjärr)" "Ladda NER (Fjärr -> Lokal)" "Skapa Lokal Mapp" "Skapa Fjärr Mapp" "Radera Lokal Fil/Mapp" "Radera Fjärr Fil/Mapp" "Stäng anslutning (Reset)" "Historik" "Tillbaka")
+        run_menu "JA COMMANDER" "Navigera och överför filer" "${options[@]}"; choice=$?
+        case $choice in
+            0) read -p "  Host: " h; [ -n "$h" ] && COM_HOST=$h; read -p "  User [root]: " u; COM_USER=${u:-root} ;;
+            1) browse_local_dir ;;
+            2) [ -z "$COM_HOST" ] && { echo "Ange Host först."; sleep 1; continue; }
+               browse_remote_dir ;;
+            4) # Ladda UPP
+               [ -z "$COM_HOST" ] && { echo "Ange Host först."; sleep 1; continue; }
+               if browse_local_file; then
+                   draw_banner "COMMANDER: UPP"
+                   echo -e "  Överför: $COM_FILE\n  Till:    ${connection}:${COM_REMOTE_CWD}\n"
+                   scp $COM_SSH_OPTS "$COM_LOCAL_CWD/$COM_FILE" "${connection}:${COM_REMOTE_CWD}/"
+                   [ $? -eq 0 ] && { echo -e "\n  ${G_CYAN}KLART!${RESET}"; echo "$COM_USER|$COM_HOST|$COM_REMOTE_CWD" >> "$SCP_HIST"; } || echo -e "\n  ${P5}FEL!${RESET}"
+                   read -rsn1 -p "Tangent...";
+               fi ;;
+            5) # Ladda NER
+               [ -z "$COM_HOST" ] && { echo "Ange Host först."; sleep 1; continue; }
+               if browse_remote_file; then
+                   draw_banner "COMMANDER: NER"
+                   echo -e "  Hämtar:  ${connection}:${COM_REMOTE_CWD}/$COM_FILE\n  Till:    $COM_LOCAL_CWD\n"
+                   scp $COM_SSH_OPTS "${connection}:${COM_REMOTE_CWD}/$COM_FILE" "$COM_LOCAL_CWD/"
+                   [ $? -eq 0 ] && echo -e "\n  ${G_CYAN}KLART!${RESET}" || echo -e "\n  ${P5}FEL!${RESET}"
+                   read -rsn1 -p "Tangent...";
+               fi ;;
+            6) # Skapa Lokal Mapp
+               read -p "  Namn på ny lokal mapp: " n; [ -n "$n" ] && mkdir -p "$COM_LOCAL_CWD/$n" ;;
+            7) # Skapa Fjärr Mapp
+               [ -z "$COM_HOST" ] && { echo "Ange Host först."; sleep 1; continue; }
+               read -p "  Namn på ny fjärrmapp: " n; [ -n "$n" ] && ssh $COM_SSH_OPTS "$connection" "mkdir -p \"$COM_REMOTE_CWD/$n\"" ;;
+            8) # Radera Lokal
+               files=($(ls -1F "$COM_LOCAL_CWD")); [ ${#files[@]} -eq 0 ] && continue
+               display=(); for f in "${files[@]}"; do display+=("$f"); done; display+=("Avbryt")
+               run_menu "DELETE LOCAL" "Välj vad som ska raderas PERMANENT" "${display[@]}"; sel=$?
+               [ $sel -lt $((${#display[@]} - 1)) ] && { read -p "  Är du säker på att du vill radera ${files[$sel]}? [j/N]: " confirm; [[ "$confirm" == "j" ]] && rm -rf "$COM_LOCAL_CWD/${files[$sel]}"; } ;;
+            9) # Radera Fjärr
+               [ -z "$COM_HOST" ] && { echo "Ange Host först."; sleep 1; continue; }
+               out=$(ssh $COM_SSH_OPTS "$connection" "ls -1F \"$COM_REMOTE_CWD\"" 2>/dev/null)
+               files=(); while IFS= read -r l; do [ -n "$l" ] && files+=("$l"); done <<< "$out"
+               [ ${#files[@]} -eq 0 ] && continue
+               display=(); for f in "${files[@]}"; do display+=("$f"); done; display+=("Avbryt")
+               run_menu "DELETE REMOTE" "Välj vad som ska raderas PERMANENT på servern" "${display[@]}"; sel=$?
+               [ $sel -lt $((${#display[@]} - 1)) ] && { read -p "  Radera ${files[$sel]} på servern? [j/N]: " confirm; [[ "$confirm" == "j" ]] && ssh $COM_SSH_OPTS "$connection" "rm -rf \"$COM_REMOTE_CWD/${files[$sel]}\""; } ;;
+            10) # Stäng anslutning
+               echo -e "  Stänger SSH-tunnel..."; ssh $COM_SSH_OPTS -O exit "$connection" 2>/dev/null; sleep 1 ;;
+            11) manage_history_generic "$SCP_HIST" "COMMANDER HISTORY" "run_com_hist" ;;
+            *) return ;;
+        esac
+    done
+}
+
+run_com_hist() {
+    IFS='|' read -r u h dst <<< "$1"
+    COM_USER=$u; COM_HOST=$h; COM_REMOTE_CWD=$dst
+}
+
+browse_local_dir() {
+    while true; do
+        local items=(); local display=()
+        display+=("${P3}[UPP] ..${RESET}" "${G_ACCENT}[VÄLJ DENNA MAPP] .${RESET}")
+        mapfile -t items < <(ls -1F "$COM_LOCAL_CWD" | grep '/$')
+        for i in "${items[@]}"; do display+=("${G_CYAN}[DIR] ${i%/}${RESET}"); done
+        display+=("Avbryt")
+        run_menu "LOCAL BROWSER: $COM_LOCAL_CWD" "Navigera till mapp" "${display[@]}"; choice=$?
+        [ $choice -eq $(( ${#display[@]} - 1 )) ] && return
+        [ $choice -eq 0 ] && { COM_LOCAL_CWD=$(cd "$COM_LOCAL_CWD/.." && pwd); continue; }
+        [ $choice -eq 1 ] && return
+        COM_LOCAL_CWD=$(cd "$COM_LOCAL_CWD/${items[$((choice-2))]%/}" && pwd)
+    done
+}
+
+browse_local_file() {
+    local items=(); local display=()
+    mapfile -t items < <(ls -1p "$COM_LOCAL_CWD" | grep -v '/$')
+    [ ${#items[@]} -eq 0 ] && { echo "Inga filer här."; sleep 1; return 1; }
+    for i in "${items[@]}"; do display+=("${G_FG}[FIL] $i${RESET}"); done
+    display+=("Avbryt")
+    run_menu "SELECT LOCAL FILE" "Välj fil att ladda upp" "${display[@]}"; choice=$?
+    [ $choice -eq $(( ${#display[@]} - 1 )) ] && return 1
+    COM_FILE="${items[$choice]}"; return 0
+}
+
+browse_remote_dir() {
+    local uh="${COM_USER}@${COM_HOST}"
+    while true; do
+        local dirs=(); local display=()
+        display+=("${P3}[UPP] ..${RESET}" "${G_ACCENT}[VÄLJ DENNA MAPP] .${RESET}" "MANUAL PATH")
+        out=$(ssh $COM_SSH_OPTS -o ConnectTimeout=3 "$uh" "ls -1F \"$COM_REMOTE_CWD\"" 2>/dev/null)
+        if [ $? -ne 0 ]; then
+            echo -e "\n  Kunde inte läsa fjärrmapp. Ange lösenord eller kontrollera anslutning."; read -p "  Sökväg: " m; COM_REMOTE_CWD=${m:-"."}; return
+        fi
+        while IFS= read -r l; do [[ "$l" == */ ]] && { dirs+=("${l%/}"); display+=("${G_CYAN}[DIR] ${l%/}${RESET}"); }; done <<< "$out"
+        display+=("Avbryt")
+        run_menu "REMOTE BROWSER: $COM_REMOTE_CWD" "Navigera på fjärrserver" "${display[@]}"; choice=$?
+        [ $choice -eq $(( ${#display[@]} - 1 )) ] && return
+        [ $choice -eq 2 ] && { read -p "  Sökväg: " m; COM_REMOTE_CWD=${m:-"."}; continue; }
+        if [ $choice -eq 0 ]; then
+            COM_REMOTE_CWD=$(ssh $COM_SSH_OPTS "$uh" "cd \"$COM_REMOTE_CWD/..\" && pwd" 2>/dev/null || echo "..")
+        elif [ $choice -eq 1 ]; then return
+        else
+            COM_REMOTE_CWD="$COM_REMOTE_CWD/${dirs[$((choice-3))]}"
+        fi
+    done
+}
+
+browse_remote_file() {
+    local uh="${COM_USER}@${COM_HOST}"; local files=(); local display=()
+    out=$(ssh $COM_SSH_OPTS -o ConnectTimeout=3 "$uh" "ls -1F \"$COM_REMOTE_CWD\"" 2>/dev/null)
+    while IFS= read -r l; do [[ "$l" != */ ]] && { files+=("$l"); display+=("${G_FG}[FIL] $l${RESET}"); }; done <<< "$out"
+    [ ${#files[@]} -eq 0 ] && { echo "Inga filer här."; sleep 1; return 1; }
+    display+=("Avbryt")
+    run_menu "SELECT REMOTE FILE" "Välj fil att ladda ner" "${display[@]}"; choice=$?
+    [ $choice -eq $(( ${#display[@]} - 1 )) ] && return 1
+    COM_FILE="${files[$choice]}"; return 0
 }
 
 # ==============================================================================
@@ -468,9 +649,9 @@ while true; do
         2) run_getip ;;
         3) run_dns_check ;;
         4) run_passwd ;;
-        5) read -p "  Host: " h; [ -n "$h" ] && run_certcheck_logic "$h" ;;
-        6) draw_banner "SPEEDTEST"; speedtest-cli; read -rsn1 ;;
-        7) run_scp_logic "||" ;;
+        5) run_cert_check ;;
+        6) run_speedtest ;;
+        7) run_scp ;;
         8) draw_banner "INFO"; echo "JA NERD KIT v10.0 - All tools restored."; read -rsn1 ;;
         9) clear; exit 0 ;;
     esac
