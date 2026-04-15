@@ -30,29 +30,35 @@ Hämta detaljerad information om din publika IP eller valfri IP-adress.
 Snabba uppslag av de vanligaste DNS-posterna (A, AAAA, MX, NS, TXT, SOA).
 - **Nyhet:** Fullständig historikhantering för domäner.
 
-### 5. JA CERTCHECK - SSL Analysis
-Djupanalys av SSL/TLS-certifikat för valfri host.
-- **Kedjeanalys:** Se hela förtroendekedjan ([LEAF], [INTERM], [ROOT]).
-- **CRL Info:** Kontrollera CRL Distribution Points.
-- **Historik:** Spara och radera tidigare certifikatanalyser.
-
-### 6. JA COMMANDER - File Transfer (SCP)
-En kraftfull filhanterare för att flytta filer mellan din lokala maskin och fjärrservrar.
-- **Commander Mode:** Navigera i både lokala och fjärrstyrda mappar.
-- **Dubbelriktad:** Ladda upp (Local -> Remote) eller Ladda ner (Remote -> Local).
-- **Persistent:** Använder SSH ControlMaster för att behålla anslutningen öppen (endast ett lösenord behövs för hela sessionen).
-- **Filhantering:** Skapa mappar och radera filer/mappar både lokalt och på servern.
-
-### 7. JA P$SSWD - Password Generator
+### 5. JA P$SSWD - Password Generator
 Skapa säkra, slumpmässiga lösenord baserade på vardagliga ord.
 - **Blandat språk:** Slumpar svenska och engelska vardagsord (400+ dolda ord).
 - **Anpassningsbar:** Välj antal ord, specialtecken, avdelare och antal lösenord.
 - **Säkerhet:** Använder `/dev/urandom` för maximal slumpmässighet.
 
-### 8. JA SPEEDTEST - Bandwidth Analysis
+### 6. JA CERTCHECK - SSL Analysis
+Djupanalys av SSL/TLS-certifikat för valfri host.
+- **Kedjeanalys:** Se hela förtroendekedjan ([LEAF], [INTERM], [ROOT]).
+- **CRL Info:** Kontrollera CRL Distribution Points.
+- **Historik:** Spara och radera tidigare certifikatanalyser.
+
+### 7. JA SPEEDTEST - Bandwidth Analysis
 Detaljerat bandbreddstest direkt i terminalen.
 - **Utökad Info:** Visar ISP, Publik IP, Testserver (namn/land) och Host.
 - **Historik:** Spara dina mätvärden för framtida jämförelser.
+
+### 8. JA IP-SCANNER - Network Discovery
+Skanna ett helt subnet eller IP-range för att hitta aktiva enheter.
+- **Smart gruppering:** Lediga IP-adresser klumpas ihop för en renare lista.
+- **Parallell skanning:** Snabb analys via parallella ping-förfrågningar.
+- **Historik:** Spara och återvisa dina nätverksskanningar.
+
+### 9. JA COMMANDER - File Transfer (SCP)
+En kraftfull filhanterare för att flytta filer mellan din lokala maskin och fjärrservrar.
+- **Commander Mode:** Navigera i både lokala och fjärrstyrda mappar.
+- **Dubbelriktad:** Ladda upp (Local -> Remote) eller Ladda ner (Remote -> Local).
+- **Persistent:** Använder SSH ControlMaster för att behålla anslutningen öppen (endast ett lösenord behövs för hela sessionen).
+- **Filhantering:** Skapa mappar och radera filer/mappar både lokalt och på servern.
 
 ---
 

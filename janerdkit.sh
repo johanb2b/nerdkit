@@ -23,10 +23,10 @@ TERM_HIST="$BASE_DIR/terminal_history"; NET_HIST="$BASE_DIR/nettest_history"
 CERT_HIST="$BASE_DIR/certcheck_history"; IP_HIST="$BASE_DIR/ipcheck_history"
 DNS_HIST="$BASE_DIR/dns_history"; SPEEDTEST_HIST="$BASE_DIR/speed_history"
 SCP_HIST="$BASE_DIR/scp_history"; WIN_TEMP="$BASE_DIR/logs"
-PASS_SAVE="$BASE_DIR/passwords.txt"
+PASS_SAVE="$BASE_DIR/passwords.txt"; IPSCAN_HIST="$BASE_DIR/ipscan_history"
 
 mkdir -p "$WIN_TEMP" 2>/dev/null
-touch "$TERM_HIST" "$NET_HIST" "$CERT_HIST" "$IP_HIST" "$DNS_HIST" "$SPEEDTEST_HIST" "$SCP_HIST"
+touch "$TERM_HIST" "$NET_HIST" "$CERT_HIST" "$IP_HIST" "$DNS_HIST" "$SPEEDTEST_HIST" "$SCP_HIST" "$IPSCAN_HIST"
 
 # --- UI Functions ---
 
@@ -637,11 +637,119 @@ run_passwd() {
 }
 
 # ==============================================================================
+# TOOL 9: JA IP-SCANNER (IP RANGE)
+# ==============================================================================
+
+run_ipscan_logic() {
+    local input="$1"; draw_banner "JA IP-SCANNER: $input"
+    echo -e "  ${G_ACCENT}${BOLD}SKANNAR NÄTVERK...${RESET}"
+    echo -e "  ${G_GREY}Detta kan ta en liten stund beroende på storlek.${RESET}\n"
+    
+    # Spara i historik
+    sed -i "/^$input$/d" "$IPSCAN_HIST" 2>/dev/null
+    echo "$input" >> "$IPSCAN_HIST"
+
+    local ips=()
+    # Enkel parsing för CIDR /24 (vanligast) eller intervall
+    if [[ $input == *"/"* ]]; then
+        local base=$(echo "$input" | cut -d'/' -f1 | cut -d'.' -f1-3)
+        for i in {1..254}; do ips+=("$base.$i"); done
+    elif [[ $input == *"-"* ]]; then
+        local start_ip=$(echo "$input" | cut -d'-' -f1)
+        local end_ip=$(echo "$input" | cut -d'-' -f2)
+        local base=$(echo "$start_ip" | cut -d'.' -f1-3)
+        local start_num=$(echo "$start_ip" | cut -d'.' -f4)
+        local end_num=$(echo "$end_ip" | cut -d'.' -f4)
+        for ((i=start_num; i<=end_num; i++)); do ips+=("$base.$i"); done
+    else
+        echo -e "  ${P5}Ogiltigt format. Använd t.ex. 192.168.1.0/24 eller 192.168.1.1-50${RESET}"
+        sleep 2; return
+    fi
+
+    local online_ips=(); local offline_count=0
+    local results_file="/tmp/ipscan_results_$(date +%s)"
+    > "$results_file"
+
+    local total=${#ips[@]}
+    local count=0
+
+    # Parallell ping med kontrollerat flöde
+    for ip in "${ips[@]}"; do
+        ((count++))
+        (
+            if ping -c 1 -W 1 "$ip" &>/dev/null; then
+                echo "$ip|ONLINE" >> "$results_file"
+            else
+                echo "$ip|OFFLINE" >> "$results_file"
+            fi
+        ) &
+        
+        # Begränsa till 20 samtidiga jobb för stabilitet i WSL
+        if [[ $(jobs -r | wc -l) -ge 20 ]]; then
+            wait -n
+        fi
+        
+        # Visa framsteg var 10:e IP
+        if (( count % 10 == 0 )); then
+            echo -ne "  Skannar... ${count}/${total}\r"
+        fi
+    done
+    wait
+    echo -e "  Skanning klar! Genererar lista...          "
+
+    # Sortera och visa resultat
+    echo -e "  ${G_ACCENT}RESULTAT:${RESET}"
+    echo -e "  ${G_GREY}------------------------------------------------------------${RESET}"
+
+    local offline_buf=()
+    while IFS='|' read -r ip status; do
+        if [[ "$status" == "ONLINE" ]]; then
+            # Om vi hade en pågående offline-grupp, skriv ut den först
+            if [ ${#offline_buf[@]} -gt 0 ]; then
+                local first=${offline_buf[0]}
+                local last=${offline_buf[-1]}
+                local count=${#offline_buf[@]}
+                echo -e "  \033[38;5;121m${count}st lediga (\033[38;5;244m${first#*.*.*.} till ${last#*.*.*.}\033[38;5;121m)${RESET}"
+                offline_buf=()
+            fi
+            # Visa Online IP i ljusorange (215)
+            echo -e "  \033[38;5;215m${ip}\033[38;5;244m [ONLINE]${RESET}"
+        else
+            offline_buf+=("$ip")
+        fi
+    done < <(sort -V "$results_file")
+
+    # Skriv ut sista offline-gruppen om den finns
+    if [ ${#offline_buf[@]} -gt 0 ]; then
+        local first=${offline_buf[0]}
+        local last=${offline_buf[-1]}
+        local count=${#offline_buf[@]}
+        echo -e "  \033[38;5;121m${count}st lediga (\033[38;5;244m${first#*.*.*.} till ${last#*.*.*.}\033[38;5;121m)${RESET}"
+    fi
+
+    echo -e "  ${G_GREY}------------------------------------------------------------${RESET}"
+    rm "$results_file"
+    read -rsn1 -p "Tryck tangent för att fortsätta...";
+}
+
+run_ipscan() {
+    while true; do
+        options=("Skanna Subnet (CIDR t.ex. /24)" "Skanna Range (t.ex. .1-50)" "Historik" "Tillbaka")
+        run_menu "JA IP-SCANNER" "IP-analys och nätverkskarta" "${options[@]}"; case $? in
+            0) read -p "  Ange subnet (t.ex. 192.168.1.0/24): " s; [ -n "$s" ] && run_ipscan_logic "$s" ;;
+            1) read -p "  Ange range (t.ex. 192.168.1.1-100): " r; [ -n "$r" ] && run_ipscan_logic "$r" ;;
+            2) manage_history_generic "$IPSCAN_HIST" "SCANNER HISTORY" "run_ipscan_logic" ;;
+            *) return ;;
+        esac
+    done
+}
+
+# ==============================================================================
 # MAIN DASHBOARD
 # ==============================================================================
 check_and_install_prereqs
 while true; do
-    options=("JA TERM - SSH & COM" "JA NETTEST - Diagnostic" "JA MIN IP - IP Intel" "JA DNS CHECK - Record Lookup" "JA P\$SSWD - Generator" "JA CERTCHECK - SSL Analysis" "JA SPEEDTEST - Bandwidth" "JA SCP - File Transfer" "Information" "Avsluta")
+    options=("JA TERM - SSH & COM" "JA NETTEST - Diagnostic" "JA MIN IP - IP Intel" "JA DNS CHECK - Record Lookup" "JA P\$SSWD - Generator" "JA CERTCHECK - SSL Analysis" "JA SPEEDTEST - Bandwidth" "JA IP-SCANNER - IP Range" "JA COMMANDER - File Transfer" "Information" "Avsluta")
     run_menu "MAIN DASHBOARD" "Välkommen Johan! Hur svårt kan det va?" "${options[@]}"
     case $? in
         0) run_term ;;
@@ -651,8 +759,9 @@ while true; do
         4) run_passwd ;;
         5) run_cert_check ;;
         6) run_speedtest ;;
-        7) run_scp ;;
-        8) draw_banner "INFO"; echo "JA NERD KIT v10.0 - All tools restored."; read -rsn1 ;;
-        9) clear; exit 0 ;;
+        7) run_ipscan ;;
+        8) run_scp ;;
+        9) draw_banner "INFO"; echo "JA NERD KIT v10.0 - All tools restored."; read -rsn1 ;;
+        10) clear; exit 0 ;;
     esac
 done
