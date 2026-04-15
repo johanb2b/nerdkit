@@ -3,8 +3,7 @@
 
 **JA Nerd Kit** är den ultimata verktygslådan för nätverkstekniker och systemadministratörer. Utvecklat av Johan Andersson för att samla alla viktiga diagnos- och administrationsverktyg i ett snyggt och lättanvänt terminalgränssnitt. **Designat specifikt för att köras i WSL (Windows Subsystem for Linux) på Windows.**
 
-<img width="777" height="366" alt="image" src="https://github.com/user-attachments/assets/c6133fce-4b1f-47fb-947a-f72fcfd9cb5b" />
-
+<img width="1111" height="370" alt="image" src="https://github.com/user-attachments/assets/1eb0aa01-4253-467f-968d-bfffc69a9d1b" />
 
 ---
 
