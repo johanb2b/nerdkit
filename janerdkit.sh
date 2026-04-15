@@ -278,29 +278,40 @@ run_getip() {
 # TOOL 4: JA DNS CHECK
 # ==============================================================================
 
+DNS_SERVER=""
+
 run_dns_logic() {
-    local domain="$1"; draw_banner "DNS CHECK: $domain"
+    local domain="$1"; local server="$2"; draw_banner "DNS CHECK: $domain"
     # Spara i historik
     sed -i "/^$domain$/d" "$DNS_HIST" 2>/dev/null
     echo "$domain" >> "$DNS_HIST"
     
+    local query_server=""
+    [ -n "$server" ] && query_server="@$server" && echo -e "  ${G_ACCENT}Använder server: ${server}${RESET}\n"
+
     echo -e "  ${G_ACCENT}${BOLD}RECORD LOOKUP:${RESET}\n  ${G_GREY}------------------------------------------------------------${RESET}"
     for type in A AAAA MX NS TXT SOA; do
         echo -e "  ${G_FG}${type} Records:${RESET}"
-        res=$(dig +short "$domain" $type); [ -z "$res" ] && echo -e "    ${P5}(Ingen data)${RESET}" || echo "$res" | sed 's/^/    /'
+        res=$(dig $query_server +short "$domain" $type); [ -z "$res" ] && echo -e "    ${P5}(Ingen data)${RESET}" || echo "$res" | sed 's/^/    /'
         echo ""
     done; read -rsn1 -p "Tangent...";
 }
 
 run_dns_check() {
     while true; do
-        options=("Ange domän" "Historik" "Tillbaka")
+        local s_label=${DNS_SERVER:-"Default"}
+        options=("Ange domän" "DNS Server: $s_label" "Historik" "Tillbaka")
         run_menu "JA DNS CHECK" "Välj funktion" "${options[@]}"; case $? in
-            0) read -p "  Ange domän: " d; [ -n "$d" ] && run_dns_logic "$d" ;;
-            1) manage_history_generic "$DNS_HIST" "DNS HISTORY" "run_dns_logic" ;;
+            0) read -p "  Ange domän: " d; [ -n "$d" ] && run_dns_logic "$d" "$DNS_SERVER" ;;
+            1) read -p "  DNS Server (t.ex. 8.8.8.8) [Default]: " s; DNS_SERVER=$s ;;
+            2) manage_history_generic "$DNS_HIST" "DNS HISTORY" "run_dns_logic_wrapper" ;;
             *) return ;;
         esac
     done
+}
+
+run_dns_logic_wrapper() {
+    run_dns_logic "$1" "$DNS_SERVER"
 }
 
 # ==============================================================================
@@ -745,11 +756,56 @@ run_ipscan() {
 }
 
 # ==============================================================================
+# TOOL: INFORMATION & SETTINGS
+# ==============================================================================
+
+run_info() {
+    draw_banner "JA NERD KIT - INFORMATION"
+    if [ -f "README.md" ]; then
+        cat README.md | head -n 50 | sed 's/^/  /'
+    else
+        echo -e "  ${G_CYAN}JA Nerd Kit v10.0${RESET}"
+        echo -e "  Utvecklat av Johan Andersson för nätverkstekniker."
+        echo -e "  Innehåller verktyg för SSH, Diagnostik, IP Intel, DNS, Lösenord,"
+        echo -e "  Certifikat, Hastighetstest, IP-scanning och Filöverföring."
+    fi
+    echo ""
+    read -rsn1 -p "Tryck tangent för att återgå...";
+}
+
+run_settings() {
+    while true; do
+        options=("Uppdatera alla requirements" "Installera snabb-path (Alias)" "Tillbaka")
+        run_menu "INSTÄLLNINGAR" "Hantera system och genvägar" "${options[@]}"; case $? in
+            0) 
+                draw_banner "UPPDATERAR REQUIREMENTS"
+                check_and_install_prereqs
+                echo -e "\n  ${G_CYAN}Alla verktyg är nu uppdaterade.${RESET}"
+                sleep 2 ;;
+            1) 
+                draw_banner "INSTALLERA GENVÄG"
+                read -p "  Vad vill du att genvägen ska heta? [nerdkit]: " alias_name
+                alias_name=${alias_name:-nerdkit}
+                local script_path=$(readlink -f "$0")
+                if grep -q "alias $alias_name=" ~/.bashrc; then
+                    echo -e "  ${P5}Genvägen '$alias_name' finns redan i ~/.bashrc.${RESET}"
+                else
+                    echo "alias $alias_name=\"$script_path\"" >> ~/.bashrc
+                    echo -e "  ${G_CYAN}KLART!${RESET} Genvägen '$alias_name' har lagts till."
+                    echo -e "  Starta om din terminal eller kör 'source ~/.bashrc' för att använda den."
+                fi
+                read -rsn1 -p "Tangent...";;
+            *) return ;;
+        esac
+    done
+}
+
+# ==============================================================================
 # MAIN DASHBOARD
 # ==============================================================================
 check_and_install_prereqs
 while true; do
-    options=("JA TERM - SSH & COM" "JA NETTEST - Diagnostic" "JA MIN IP - IP Intel" "JA DNS CHECK - Record Lookup" "JA P\$SSWD - Generator" "JA CERTCHECK - SSL Analysis" "JA SPEEDTEST - Bandwidth" "JA IP-SCANNER - IP Range" "JA COMMANDER - File Transfer" "Information" "Avsluta")
+    options=("JA TERM - SSH & COM" "JA NETTEST - Diagnostic" "JA MIN IP - IP Intel" "JA DNS CHECK - Record Lookup" "JA P\$SSWD - Generator" "JA CERTCHECK - SSL Analysis" "JA SPEEDTEST - Bandwidth" "JA IP-SCANNER - IP Range" "JA COMMANDER - File Transfer" "Information" "Inställningar" "Avsluta")
     run_menu "MAIN DASHBOARD" "Välkommen Johan! Hur svårt kan det va?" "${options[@]}"
     case $? in
         0) run_term ;;
@@ -761,7 +817,8 @@ while true; do
         6) run_speedtest ;;
         7) run_ipscan ;;
         8) run_scp ;;
-        9) draw_banner "INFO"; echo "JA NERD KIT v10.0 - All tools restored."; read -rsn1 ;;
-        10) clear; exit 0 ;;
+        9) run_info ;;
+        10) run_settings ;;
+        11) clear; exit 0 ;;
     esac
 done
