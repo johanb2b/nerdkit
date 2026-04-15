@@ -24,9 +24,10 @@ CERT_HIST="$BASE_DIR/certcheck_history"; IP_HIST="$BASE_DIR/ipcheck_history"
 DNS_HIST="$BASE_DIR/dns_history"; SPEEDTEST_HIST="$BASE_DIR/speed_history"
 SCP_HIST="$BASE_DIR/scp_history"; WIN_TEMP="$BASE_DIR/logs"
 PASS_SAVE="$BASE_DIR/passwords.txt"; IPSCAN_HIST="$BASE_DIR/ipscan_history"
+WHOIS_HIST="$BASE_DIR/whois_history"
 
 mkdir -p "$WIN_TEMP" 2>/dev/null
-touch "$TERM_HIST" "$NET_HIST" "$CERT_HIST" "$IP_HIST" "$DNS_HIST" "$SPEEDTEST_HIST" "$SCP_HIST" "$IPSCAN_HIST"
+touch "$TERM_HIST" "$NET_HIST" "$CERT_HIST" "$IP_HIST" "$DNS_HIST" "$SPEEDTEST_HIST" "$SCP_HIST" "$IPSCAN_HIST" "$WHOIS_HIST"
 
 # --- UI Functions ---
 
@@ -98,6 +99,7 @@ check_and_install_prereqs() {
     command -v curl >/dev/null || missing+=("curl")
     command -v bc >/dev/null || missing+=("bc")
     command -v speedtest-cli >/dev/null || missing+=("speedtest-cli")
+    command -v whois >/dev/null || missing+=("whois")
     [ ${#missing[@]} -gt 0 ] && { echo -e "  ${G_ACCENT}Installerar systemverktyg...${RESET}"; sudo apt-get update -q && sudo apt-get install -y "${missing[@]}"; }
 }
 
@@ -756,6 +758,51 @@ run_ipscan() {
 }
 
 # ==============================================================================
+# TOOL 10: JA WHOIS INFO
+# ==============================================================================
+
+run_whois_logic() {
+    local target="$1"; draw_banner "JA WHOIS INFO: $target"
+    echo -e "  ${G_ACCENT}${BOLD}HÄMTAR WHOIS-DATA...${RESET}\n"
+
+    # Spara i historik
+    sed -i "/^$target$/d" "$WHOIS_HIST" 2>/dev/null
+    echo "$target" >> "$WHOIS_HIST"
+
+    local data=$(whois "$target" 2>/dev/null)
+    if [ -z "$data" ]; then
+        echo -e "  ${P5}Kunde inte hämta data för $target.${RESET}"
+    else
+        echo -e "  ${G_CYAN}${BOLD}VÄSENTLIG INFORMATION:${RESET}"
+        echo -e "  ${G_GREY}----------------------------------------${RESET}"
+        
+        # Smart filtrering för både domäner och IP
+        echo "$data" | grep -Ei "Registrar:|Organization:|OrgName:|Registrant:|holder:|Admin Name:|Admin Organization:|Tech Name:|Expires|Expiry|Registry Expiry Date:|paid-till|Creation Date:|created:|Status:|netname:|descr:|country:" | \
+        sed 's/^[ \t]*//' | sort -u | while read -r line; do
+            key=$(echo "$line" | cut -d':' -f1)
+            val=$(echo "$line" | cut -d':' -f2-)
+            echo -e "  ${G_ACCENT}$(printf "%-20s" "$key:")${RESET} $val"
+        done
+        echo -e "  ${G_GREY}----------------------------------------${RESET}"
+    fi
+    
+    echo ""
+    read -n 1 -s -r -p "  Tryck på valfri tangent för att fortsätta..."
+}
+
+run_whois() {
+    while true; do
+        options=("Slå upp Domän eller IP" "Historik" "Tillbaka")
+        run_menu "JA WHOIS INFO" "Ägar-information och domänstatus" "${options[@]}"
+        case $? in
+            0) read -p "  Ange Domän eller IP: " t; [ -n "$t" ] && run_whois_logic "$t" ;;
+            1) manage_history_generic "$WHOIS_HIST" "WHOIS HISTORY" "run_whois_logic" ;;
+            *) return ;;
+        esac
+    done
+}
+
+# ==============================================================================
 # TOOL: INFORMATION & SETTINGS
 # ==============================================================================
 
@@ -766,8 +813,17 @@ run_info() {
     else
         echo -e "  ${G_CYAN}JA Nerd Kit v10.0${RESET}"
         echo -e "  Utvecklat av Johan Andersson för nätverkstekniker."
-        echo -e "  Innehåller verktyg för SSH, Diagnostik, IP Intel, DNS, Lösenord,"
-        echo -e "  Certifikat, Hastighetstest, IP-scanning och Filöverföring."
+        echo -e "  Verktyg i denna version:"
+        echo -e "  - JA TERM: SSH-klient med sessionshantering"
+        echo -e "  - JA NETTEST: Nätverksdiagnostik (Ping, Traceroute)"
+        echo -e "  - JA MIN IP: Publik IP-info och Geolocation"
+        echo -e "  - JA DNS CHECK: DNS-uppslagningar (A, MX, TXT etc.)"
+        echo -e "  - JA P\$SSWD: Säker lösenordsgenerator"
+        echo -e "  - JA CERTCHECK: SSL/TLS-certifikatanalys"
+        echo -e "  - JA SPEEDTEST: Bandbreddsmätning"
+        echo -e "  - JA IP-SCANNER: Snabb scanning av IP-omfång"
+        echo -e "  - JA COMMANDER: Filöverföring via SCP/SFTP"
+        echo -e "  - JA WHOIS INFO: Ägarinformation för domäner/IP"
     fi
     echo ""
     read -rsn1 -p "Tryck tangent för att återgå...";
@@ -787,25 +843,27 @@ run_settings() {
                 read -p "  Vad vill du att genvägen ska heta? [nerdkit]: " alias_name
                 alias_name=${alias_name:-nerdkit}
                 local script_path=$(readlink -f "$0")
-                if grep -q "alias $alias_name=" ~/.bashrc; then
-                    echo -e "  ${P5}Genvägen '$alias_name' finns redan i ~/.bashrc.${RESET}"
+                local target_file="$HOME/.bashrc"
+                [ -f "$HOME/.zshrc" ] && target_file="$HOME/.zshrc"
+
+                if grep -q "alias $alias_name=" "$target_file" 2>/dev/null; then
+                    echo -e "  ${P5}Genvägen '$alias_name' finns redan i $target_file.${RESET}"
                 else
-                    echo "alias $alias_name=\"$script_path\"" >> ~/.bashrc
-                    echo -e "  ${G_CYAN}KLART!${RESET} Genvägen '$alias_name' har lagts till."
-                    echo -e "  Starta om din terminal eller kör 'source ~/.bashrc' för att använda den."
+                    echo -e "\nalias $alias_name=\"$script_path\"" >> "$target_file"
+                    echo -e "  ${G_CYAN}KLART!${RESET} Genvägen '$alias_name' har lagts till i $target_file."
+                    echo -e "  Starta om din terminal eller kör 'source $target_file' för att använda den."
                 fi
                 read -rsn1 -p "Tangent...";;
             *) return ;;
         esac
     done
 }
-
 # ==============================================================================
 # MAIN DASHBOARD
 # ==============================================================================
 check_and_install_prereqs
 while true; do
-    options=("JA TERM - SSH & COM" "JA NETTEST - Diagnostic" "JA MIN IP - IP Intel" "JA DNS CHECK - Record Lookup" "JA P\$SSWD - Generator" "JA CERTCHECK - SSL Analysis" "JA SPEEDTEST - Bandwidth" "JA IP-SCANNER - IP Range" "JA COMMANDER - File Transfer" "Information" "Inställningar" "Avsluta")
+    options=("JA TERM - SSH & COM" "JA NETTEST - Diagnostic" "JA MIN IP - IP Intel" "JA DNS CHECK - Record Lookup" "JA P\$SSWD - Generator" "JA CERTCHECK - SSL Analysis" "JA SPEEDTEST - Bandwidth" "JA IP-SCANNER - IP Range" "JA COMMANDER - File Transfer" "JA WHOIS INFO - Ownership" "Information" "Inställningar" "Avsluta")
     run_menu "MAIN DASHBOARD" "Välkommen Johan! Hur svårt kan det va?" "${options[@]}"
     case $? in
         0) run_term ;;
@@ -817,8 +875,9 @@ while true; do
         6) run_speedtest ;;
         7) run_ipscan ;;
         8) run_scp ;;
-        9) run_info ;;
-        10) run_settings ;;
-        11) clear; exit 0 ;;
+        9) run_whois ;;
+        10) run_info ;;
+        11) run_settings ;;
+        12) clear; exit 0 ;;
     esac
 done
