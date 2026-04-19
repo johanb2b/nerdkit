@@ -67,14 +67,14 @@ Scriptet är portabelt. All data, historik och loggar sparas i en undermapp som 
    mkdir -p ~/tools/nerdkit
    cd ~/tools/nerdkit
    ```
-3. Placera `janerdkit_mac.sh` i mappen.
+3. Placera `nerdkit_mac.sh` i mappen.
 4. Gör filen exekverbar:
    ```bash
-   chmod +x janerdkit_mac.sh
+   chmod +x nerdkit_mac.sh
    ```
 5. Kör scriptet:
    ```bash
-   ./janerdkit_mac.sh
+   ./nerdkit_mac.sh
    ```
 
 ---
