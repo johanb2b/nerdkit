@@ -3,7 +3,7 @@
 
 **JA Nerd Kit** är den ultimata verktygslådan för nätverkstekniker och systemadministratörer. Utvecklat av Johan Andersson för att samla alla viktiga diagnos- och administrationsverktyg i ett snyggt och lättanvänt terminalgränssnitt. **Denna version är optimerad specifikt för macOS.**
 
-<img width="642" height="347" alt="image" src="https://github.com/user-attachments/assets/9a971c19-84ef-464d-8210-2c9f28ff0488" />
+![Main Dashboard Placeholder](https://via.placeholder.com/800x400?text=JA+Nerd+Kit+Mac+Dashboard)
 
 ---
 
@@ -14,6 +14,11 @@ Hantera dina SSH- och seriella anslutningar (t.ex. USB-till-Console) på ett smi
 - **Historik & Favoriter:** Spara dina vanligaste anslutningar med färgkodning.
 - **Loggning:** Automatisk loggning av sessioner till den lokala mappen `data/logs`.
 - **TMUX-integration:** Kör stabila sessioner som överlever nätverksavbrott (kräver tmux).
+
+> 💡 **Tips för att avsluta:**  
+> - Skriv `exit` för att stänga sessionen helt.  
+> - Tryck `Ctrl+b` följt av `d` för att lämna sessionen aktiv i bakgrunden (du kan återansluta senare via historiken).  
+> - Om SSH har låst sig: Tryck `Enter` följt av `~.` (tilde punkt) för att tvinga fram en avslutning.
 
 ### 2. JA NETTEST - Diagnostic Dashboard
 En kraftfull realtidsvy som ger dig en snabb överblick av en anslutning.
@@ -62,14 +67,14 @@ Scriptet är portabelt. All data, historik och loggar sparas i en undermapp som 
    mkdir -p ~/tools/nerdkit
    cd ~/tools/nerdkit
    ```
-3. Placera `nerdkit_mac.sh` i mappen.
+3. Placera `janerdkit_mac.sh` i mappen.
 4. Gör filen exekverbar:
    ```bash
-   chmod +x nerdkit_mac.sh
+   chmod +x janerdkit_mac.sh
    ```
 5. Kör scriptet:
    ```bash
-   ./nerdkit_mac.sh
+   ./janerdkit_mac.sh
    ```
 
 ---
