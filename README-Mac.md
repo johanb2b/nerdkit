@@ -3,7 +3,7 @@
 
 **JA Nerd Kit** är den ultimata verktygslådan för nätverkstekniker och systemadministratörer. Utvecklat av Johan Andersson för att samla alla viktiga diagnos- och administrationsverktyg i ett snyggt och lättanvänt terminalgränssnitt. **Denna version är optimerad specifikt för macOS.**
 
-![Main Dashboard Placeholder](https://via.placeholder.com/800x400?text=JA+Nerd+Kit+Mac+Dashboard)
+<img width="642" height="347" alt="image" src="https://github.com/user-attachments/assets/9a971c19-84ef-464d-8210-2c9f28ff0488" />
 
 ---
 
